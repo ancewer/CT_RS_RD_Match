@@ -1,6 +1,6 @@
 # CT_RS_RD_Match
 
-**CT_RS_RD_Match** is a Python-based medical imaging tool designed for handling **DICOM** files, specifically **CT (Computed Tomography), RT Structure (Region of Interest Contours), and RT Dose** files. The tool extracts, resamples, and visualizes these medical datasets.
+**CT_RS_RD_Match** is a Python-based medical imaging tool designed for handling **DICOM** files, specifically **CT, RT Structure, and RT Dose** files. The tool extracts, resamples, and visualizes these medical datasets.
 
 ---
 
