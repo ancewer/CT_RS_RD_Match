@@ -110,8 +110,8 @@ def resample_to_dose_grid(source_array, source_origin, source_spacing, dose_arra
     source_shape = source_array.shape
     coord_mins = np.min(source_coords, axis=1)
     coord_maxs = np.max(source_coords, axis=1)
-    print(f"Source coords min: {coord_mins}, max: {coord_maxs}")
-    print(f"Source array shape: {source_shape}")
+    print(f"✅Source coords min: {coord_mins}, max: {coord_maxs}")
+    print(f"✅Source array shape: {source_shape}")
 
     # **选择插值模式**
     # 格外注意：map_coordinates不能处理坐标索引为负值的情况
@@ -531,21 +531,21 @@ def main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mh
 
     # resample_image_to_target(os.path.join(tmp_folder,'ct_array.mhd'), os.path.join(tmp_folder,'dose_array.mhd'), os.path.join(tmp_folder,'ct_resampled.mhd'), is_mask=False)
     # 4️⃣ 重新采样 CT 和掩码到剂量坐标系
-    print(f"ct_origin:{ct_origin},ct_spacing:{ct_spacing},ct_shape:{ct_array.shape[::-1]}")
-    print(f"dose_origin:{dose_origin},dose_spacing:{dose_spacing},dose_shape:{dose_array.shape[::-1]}")
+    print(f"✅ct_origin:{ct_origin},ct_spacing:{ct_spacing},ct_shape:{ct_array.shape[::-1]}")
+    print(f"✅dose_origin:{dose_origin},dose_spacing:{dose_spacing},dose_shape:{dose_array.shape[::-1]}")
     ct_range = compute_physical_range(ct_origin,ct_spacing,ct_array.shape[::-1])
     dose_range = compute_physical_range(dose_origin,dose_spacing,dose_array.shape[::-1])
     print(f"✅ CT 物理范围 (mm): X:[{ct_range[0]}, {ct_range[1]}], "f"Y:[{ct_range[2]}, {ct_range[3]}], Z:[{ct_range[4]}, {ct_range[5]}]")
     print(f"✅ Dose 物理范围 (mm): X:[{dose_range[0]}, {dose_range[1]}], "f"Y:[{dose_range[2]}, {dose_range[3]}], Z:[{dose_range[4]}, {dose_range[5]}]")
 
     ct_resampled = resample_to_dose_grid(ct_array, ct_origin, ct_spacing, dose_array, dose_origin, dose_spacing,is_mask=False)
-    print(f"Before Resampling, Mask Sum: {np.sum(mask)}")
+    print(f"✅Before Resampling, Mask Sum: {np.sum(mask)}")
     mask_resampled = resample_to_dose_grid(mask, ct_origin, ct_spacing, dose_array, dose_origin, dose_spacing, is_mask=True)
-    print(f"After Resampling, Mask Sum: {np.sum(mask_resampled)}")  # 这里不应该是 0
+    print(f"✅After Resampling, Mask Sum: {np.sum(mask_resampled)}")  # 这里不应该是 0
     volume = compute_roi_volume(mask, ct_spacing)
-    print(f"Before Resampling, {roi_name} volume: {volume}cc")
+    print(f"✅Before Resampling, {roi_name} volume: {volume}cc")
     volume = compute_roi_volume(mask_resampled, dose_spacing)
-    print(f"After Resampling, {roi_name} volume: {volume}cc")
+    print(f"✅After Resampling, {roi_name} volume: {volume}cc")
     if write_mhd:
         save_as_mhd(ct_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "ct_resampled.mhd"))
         save_as_mhd(mask_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "mask_resampled.mhd"))

@@ -5,8 +5,16 @@ from PIL import Image, ImageTk
 import os
 import pydicom
 
+# 默认窗位窗宽预设值 (Window Level, Window Width)
+WINDOW_PRESETS = {
+    "Lung": (-600, 1500),      # 肺窗
+    "Soft Tissue": (40, 400),  # 软组织窗
+    "Bone": (300, 1500),       # 骨窗
+    "Brain": (40, 80),         # 脑窗
+    "Custom": (0, 1000)       # 默认自定义
+}
 
-def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd):
+def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd, window_level=0, window_width=1000):
     """主函数：加载 CT、RT Structure、RT Dose 并进行可视化"""
     def custom_print(*args, **kwargs):
         text_output.insert(tk.END, " ".join(map(str, args)) + "\n")
@@ -30,26 +38,26 @@ def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd
             save_as_mhd(dose_array, dose_origin, dose_spacing, os.path.join(tmp_folder, "dose_array.mhd"))
             save_as_mhd(mask, ct_origin, ct_spacing, os.path.join(tmp_folder, "mask_array.mhd"))
 
-        print(f"ct_origin:{ct_origin}, ct_spacing:{ct_spacing}, ct_shape:{ct_array.shape[::-1]}")
-        print(f"dose_origin:{dose_origin}, dose_spacing:{dose_spacing}, dose_shape:{dose_array.shape[::-1]}")
+        print(f"✅ct_origin:{ct_origin}, ct_spacing:{ct_spacing}, ct_shape:{ct_array.shape[::-1]}")
+        print(f"✅dose_origin:{dose_origin}, dose_spacing:{dose_spacing}, dose_shape:{dose_array.shape[::-1]}")
         ct_range = compute_physical_range(ct_origin, ct_spacing, ct_array.shape[::-1])
         dose_range = compute_physical_range(dose_origin, dose_spacing, dose_array.shape[::-1])
         print(f"✅ CT 物理范围 (mm): X:[{ct_range[0]}, {ct_range[1]}], Y:[{ct_range[2]}, {ct_range[3]}], Z:[{ct_range[4]}, {ct_range[5]}]")
         print(f"✅ Dose 物理范围 (mm): X:[{dose_range[0]}, {dose_range[1]}], Y:[{dose_range[2]}, {dose_range[3]}], Z:[{dose_range[4]}, {dose_range[5]}]")
 
         ct_resampled = resample_to_dose_grid(ct_array, ct_origin, ct_spacing, dose_array, dose_origin, dose_spacing, is_mask=False)
-        print(f"Before Resampling, Mask Sum: {np.sum(mask)}")
+        print(f"✅Before Resampling, Mask Sum: {np.sum(mask)}")
         mask_resampled = resample_to_dose_grid(mask, ct_origin, ct_spacing, dose_array, dose_origin, dose_spacing, is_mask=True)
-        print(f"After Resampling, Mask Sum: {np.sum(mask_resampled)}")
+        print(f"✅After Resampling, Mask Sum: {np.sum(mask_resampled)}")
         volume = compute_roi_volume(mask, ct_spacing)
-        print(f"Before Resampling, {roi_name} volume: {volume}cc")
+        print(f"✅Before Resampling, {roi_name} volume: {volume}cc")
         volume = compute_roi_volume(mask_resampled, dose_spacing)
-        print(f"After Resampling, {roi_name} volume: {volume}cc")
+        print(f"✅After Resampling, {roi_name} volume: {volume}cc")
         if write_mhd:
             save_as_mhd(ct_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "ct_resampled.mhd"))
             save_as_mhd(mask_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "mask_resampled.mhd"))
 
-        plot_ct_contour_dose_interactive_best1(ct_resampled, mask_resampled, dose_array)
+        plot_ct_contour_dose_interactive_best1(ct_resampled, mask_resampled, dose_array, window_width, window_level)
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
@@ -155,7 +163,10 @@ def create_gui():
         text_output.delete(1.0, tk.END)
         progress_bar["value"] = 0
         root.update()
-        run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd)
+        # 获取窗位窗宽
+        preset_name = window_preset_combo.get()
+        window_level, window_width = WINDOW_PRESETS[preset_name]
+        run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd, window_level, window_width)
         progress_bar["value"] = 100
         root.update()
 
@@ -204,25 +215,31 @@ def create_gui():
     tk.Entry(frame, textvariable=tmp_folder_var, width=50).grid(row=5, column=1)
     tk.Button(frame, text="Browse", command=lambda: tmp_folder_var.set(filedialog.askdirectory())).grid(row=5, column=2)
 
-    write_mhd_var = tk.BooleanVar(value=True)
-    tk.Checkbutton(frame, text="Save MHD Files", variable=write_mhd_var).grid(row=6, column=1, sticky="w")
+    # 添加窗位窗宽预设选择
+    tk.Label(frame, text="Window Preset:").grid(row=6, column=0, sticky="w")
+    window_preset_combo = tk.StringVar(value="Custom")  # 默认选择 Custom
+    preset_menu = tk.OptionMenu(frame, window_preset_combo, *WINDOW_PRESETS.keys())
+    preset_menu.grid(row=6, column=1, sticky="w")
 
-    tk.Label(frame, text="Output:").grid(row=7, column=0, sticky="nw")
+    write_mhd_var = tk.BooleanVar(value=True)
+    tk.Checkbutton(frame, text="Save MHD Files", variable=write_mhd_var).grid(row=7, column=1, sticky="w")
+
+    tk.Label(frame, text="Output:").grid(row=8, column=0, sticky="nw")
     text_output = scrolledtext.ScrolledText(frame, width=70, height=20)
-    text_output.grid(row=8, column=0, columnspan=4, pady=5)
+    text_output.grid(row=9, column=0, columnspan=4, pady=5)
 
     tk.Button(frame, text="Run", command=lambda: run_program(
         ct_combo.get(), rs_combo.get(), rd_combo.get(),
         roi_combo.get(), tmp_folder_var.get(), write_mhd_var.get()
-    )).grid(row=9, column=1, pady=10)
-    tk.Button(frame, text="Exit", command=root.quit).grid(row=9, column=2)
+    )).grid(row=10, column=1, pady=10)
+    tk.Button(frame, text="Exit", command=root.quit).grid(row=10, column=2)
 
     # 添加进度条
     progress_bar = ttk.Progressbar(frame, length=400, mode="determinate", maximum=100)
-    progress_bar.grid(row=10, column=0, columnspan=4, pady=10)
+    progress_bar.grid(row=11, column=0, columnspan=4, pady=10)
 
     # 配置行列权重，使窗口可伸缩
-    for i in range(11):  # 行数
+    for i in range(12):  # 行数
         frame.grid_rowconfigure(i, weight=1 if i == 8 else 0)  # 文本框行可伸缩
     for i in range(4):  # 列数
         frame.grid_columnconfigure(i, weight=1 if i == 1 else 0)  # 下拉菜单列可伸缩
