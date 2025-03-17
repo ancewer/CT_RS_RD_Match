@@ -5,7 +5,8 @@ from PIL import Image, ImageTk
 import os
 import pydicom
 
-def main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd):
+
+def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd):
     """主函数：加载 CT、RT Structure、RT Dose 并进行可视化"""
     def custom_print(*args, **kwargs):
         text_output.insert(tk.END, " ".join(map(str, args)) + "\n")
@@ -141,7 +142,7 @@ def create_gui():
         rd_menu.grid(row=3, column=1, sticky="w")
         if rd_files:
             rd_combo.set(rd_files[0])
-
+        progress_bar["value"] = 90
         update_roi_options()
         progress_bar["value"] = 100
         root.update()
@@ -154,7 +155,7 @@ def create_gui():
         text_output.delete(1.0, tk.END)
         progress_bar["value"] = 0
         root.update()
-        main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd)
+        run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd)
         progress_bar["value"] = 100
         root.update()
 
@@ -228,5 +229,8 @@ def create_gui():
 
     root.mainloop()
 
-if __name__ == "__main__":
+def main():
     create_gui()
+
+if __name__ == "__main__":
+    main()

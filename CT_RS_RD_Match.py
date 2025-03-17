@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')  # 强制使用 TkAgg 后端
 import os
 import glob
 import numpy as np
