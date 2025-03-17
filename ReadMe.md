@@ -24,8 +24,10 @@ Launch the interactive GUI:
 ```bash
 python CT_RS_RD_Match_GUI.py
 ```
-### Interface
-![GUI](pics/GUI.png)
+### Interface GUI_v1
+![GUI](pics/GUI_v1.png)
+### Interface GUI_v2
+![GUI](pics/GUI_v2.png)
 ### test case1
 ![GUI](pics/case1.png)
 ### test case2

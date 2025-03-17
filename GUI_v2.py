@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 from CT_RS_RD_Match import *
 from PIL import Image, ImageTk
 import os
@@ -68,7 +68,8 @@ def create_gui():
         root.iconphoto(True, photo)
     except Exception as e:
         print(f"Failed to load icon: {e}")
-    root.geometry("600x700")
+    root.geometry("600x750")  # 初始大小
+    root.minsize(600, 750)  # 最小大小
 
     frame = tk.Frame(root, padx=10, pady=10)
     frame.pack(fill="both", expand=True)
@@ -94,27 +95,36 @@ def create_gui():
         if not folder or not os.path.isdir(folder):
             messagebox.showwarning("Input Error", "Please select a valid folder!")
             return
+        progress_bar["value"] = 0
+        root.update()
 
         ct_folders = set()
         rs_files = []
         rd_files = []
 
+        all_files = []
         for subdir, _, files in os.walk(folder):
             for f in files:
-                file_path = os.path.join(subdir, f)
-                try:
-                    ds = pydicom.dcmread(file_path, stop_before_pixels=True)
-                    modality = ds.get((0x0008, 0x0060), None)
-                    if modality:
-                        modality = modality.value
-                        if modality == "CT":
-                            ct_folders.add(subdir)
-                        elif modality == "RTSTRUCT":
-                            rs_files.append(file_path)
-                        elif modality == "RTDOSE":
-                            rd_files.append(file_path)
-                except Exception:
-                    continue
+                all_files.append(os.path.join(subdir, f))
+
+        total_files = len(all_files)
+        for i, file_path in enumerate(all_files):
+            try:
+                ds = pydicom.dcmread(file_path, stop_before_pixels=True)
+                modality = ds.get((0x0008, 0x0060), None)
+                if modality:
+                    modality = modality.value
+                    if modality == "CT":
+                        ct_folders.add(os.path.dirname(file_path))
+                    elif modality == "RTSTRUCT":
+                        rs_files.append(file_path)
+                    elif modality == "RTDOSE":
+                        rd_files.append(file_path)
+            except Exception:
+                continue
+            # 模拟进度
+            progress_bar["value"] = (i + 1) * 80 / total_files
+            root.update()
 
         ct_list = sorted(list(ct_folders))
         ct_menu = tk.OptionMenu(frame, ct_combo, *ct_list)
@@ -133,19 +143,42 @@ def create_gui():
             rd_combo.set(rd_files[0])
 
         update_roi_options()
+        progress_bar["value"] = 100
+        root.update()
+        adjust_window_size()
 
     def run_program(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd):
         if not all([ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder]):
             messagebox.showwarning("Input Error", "Please select all required options!")
             return
         text_output.delete(1.0, tk.END)
+        progress_bar["value"] = 0
+        root.update()
         main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd)
+        progress_bar["value"] = 100
+        root.update()
+
+    def adjust_window_size():
+        """动态调整窗口大小以适应内容"""
+        # 计算所有控件的总宽度和高度
+        frame.update_idletasks()  # 更新布局以获取实际大小
+        required_width = frame.winfo_reqwidth() + 20  # 加上边距
+        required_height = frame.winfo_reqheight() + 20
+
+        # 设置最小窗口大小
+        min_width, min_height = 600, 750
+        new_width = max(min_width, required_width)
+        new_height = max(min_height, required_height)
+
+        # 更新窗口大小
+        root.geometry(f"{new_width}x{new_height}")
 
     # GUI 布局
     tk.Label(frame, text="Main Folder:").grid(row=0, column=0, sticky="w")
     main_folder_var = tk.StringVar()
-    tk.Entry(frame, textvariable=main_folder_var, width=50).grid(row=0, column=1)
-    tk.Button(frame, text="Browse", command=lambda: load_files(main_folder_var)).grid(row=0, column=2)
+    tk.Entry(frame, textvariable=main_folder_var, width=40).grid(row=0, column=1, sticky="w")
+    tk.Button(frame, text="Browse", command=lambda:main_folder_var.set(filedialog.askdirectory())).grid(row=0, column=2, padx=5)
+    tk.Button(frame, text="Load...", command=lambda: load_files(main_folder_var)).grid(row=0, column=3)
 
     tk.Label(frame, text="CT Folder:").grid(row=1, column=0, sticky="w")
     ct_combo = tk.StringVar()
@@ -153,7 +186,8 @@ def create_gui():
 
     tk.Label(frame, text="RT Structure File:").grid(row=2, column=0, sticky="w")
     rs_combo = tk.StringVar()
-    tk.OptionMenu(frame, rs_combo, "").grid(row=2, column=1, sticky="w")
+    rs_menu = tk.OptionMenu(frame, rs_combo, "")
+    rs_menu.grid(row=2,columnspan=2, column=1, sticky="w")
     rs_combo.trace("w", update_roi_options)
 
     tk.Label(frame, text="RT Dose File:").grid(row=3, column=0, sticky="w")
@@ -174,13 +208,23 @@ def create_gui():
 
     tk.Label(frame, text="Output:").grid(row=7, column=0, sticky="nw")
     text_output = scrolledtext.ScrolledText(frame, width=70, height=20)
-    text_output.grid(row=8, column=0, columnspan=3, pady=5)
+    text_output.grid(row=8, column=0, columnspan=4, pady=5)
 
     tk.Button(frame, text="Run", command=lambda: run_program(
         ct_combo.get(), rs_combo.get(), rd_combo.get(),
         roi_combo.get(), tmp_folder_var.get(), write_mhd_var.get()
     )).grid(row=9, column=1, pady=10)
     tk.Button(frame, text="Exit", command=root.quit).grid(row=9, column=2)
+
+    # 添加进度条
+    progress_bar = ttk.Progressbar(frame, length=400, mode="determinate", maximum=100)
+    progress_bar.grid(row=10, column=0, columnspan=4, pady=10)
+
+    # 配置行列权重，使窗口可伸缩
+    for i in range(11):  # 行数
+        frame.grid_rowconfigure(i, weight=1 if i == 8 else 0)  # 文本框行可伸缩
+    for i in range(4):  # 列数
+        frame.grid_columnconfigure(i, weight=1 if i == 1 else 0)  # 下拉菜单列可伸缩
 
     root.mainloop()
 
