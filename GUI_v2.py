@@ -1,4 +1,10 @@
-# attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
+##############################################################################
+# Author: Chunbo Liu, PhD
+# E-mail: ancewer@outlook.com
+# Create Time: March 15, 2025
+# CT/RS/RD file match and display
+##############################################################################
+# Attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 from CT_RS_RD_Match import *

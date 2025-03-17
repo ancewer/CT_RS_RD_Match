@@ -1,5 +1,9 @@
-import matplotlib
-matplotlib.use('TkAgg')  # 强制使用 TkAgg 后端
+##############################################################################
+# Author: Chunbo Liu, PhD
+# E-mail: ancewer@outlook.com
+# Create Time: March 15, 2025
+# CT/RS/RD file match and display
+##############################################################################
 import os
 import glob
 import numpy as np
