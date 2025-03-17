@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 from CT_RS_RD_Match import *
 from PIL import Image, ImageTk
+import sys
 
 def main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd):
     """主函数：加载 CT、RT Structure、RT Dose 并进行可视化"""
@@ -138,5 +139,24 @@ def create_gui():
 
     root.mainloop()
 
-if __name__ == "__main__":
+def check_python_version():
+    """检查 Python 版本，并在使用 3.12 时给出警告"""
+    python_version = sys.version_info
+    current_version = f"{python_version.major}.{python_version.minor}"
+    if python_version.major == 3 and python_version.minor == 12:
+        warning_msg = (
+            f"警告：当前运行的 Python 版本为 {current_version}。\n"
+            "此程序可能在 Python 3.12 上存在兼容性问题。\n"
+            "建议使用 Python 3.10 以确保最佳性能和稳定性。\n"
+            "您可以继续运行，但可能会遇到意外错误。"
+        )
+        messagebox.showwarning("Python 版本警告", warning_msg)
+    print(f"当前 Python 版本: {current_version}")
+
+def main():
+    # 检查 Python 版本
+    check_python_version()
     create_gui()
+
+if __name__ == "__main__":
+    main()

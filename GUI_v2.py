@@ -1,9 +1,11 @@
+# attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 from CT_RS_RD_Match import *
 from PIL import Image, ImageTk
-import os
+import os,sys
 import pydicom
+from multiprocessing import Pool, cpu_count
 
 # 默认窗位窗宽预设值 (Window Level, Window Width)
 WINDOW_PRESETS = {
@@ -26,7 +28,9 @@ def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd
     builtins.print = custom_print
 
     try:
+        print(f"Loading CT from: {ct_folder}")
         ct_array, ct_origin, ct_spacing, _ = load_ct_images(ct_folder)
+        print(f"CT array shape: {ct_array.shape}")
         contours = load_rt_structure(rt_structure_file)
         mask = convert_contours_to_mask(ct_array, ct_origin, ct_spacing, contours, roi_name)
         dose_array, dose_origin, dose_spacing = load_dose(dose_file)
@@ -57,12 +61,29 @@ def run(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mhd
             save_as_mhd(ct_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "ct_resampled.mhd"))
             save_as_mhd(mask_resampled, dose_origin, dose_spacing, os.path.join(tmp_folder, "mask_resampled.mhd"))
 
-        plot_ct_contour_dose_interactive_best1(ct_resampled, mask_resampled, dose_array, window_width, window_level)
+        plot_ct_contour_dose_interactive_best1(ct_resampled, mask_resampled, dose_array, window_level, window_width)
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
     finally:
         builtins.print = original_print
+
+# 将 check_file 移到模块级别
+def check_file(file_path):
+    try:
+        ds = pydicom.dcmread(file_path, stop_before_pixels=True)
+        modality = ds.get((0x0008, 0x0060), None)
+        if modality:
+            modality = modality.value
+            if modality == "CT":
+                return ("CT", os.path.dirname(file_path))
+            elif modality == "RTSTRUCT":
+                return ("RTSTRUCT", file_path)
+            elif modality == "RTDOSE":
+                return ("RTDOSE", file_path)
+    except Exception:
+        pass
+    return None
 
 # GUI 界面设计
 def create_gui():
@@ -111,29 +132,28 @@ def create_gui():
         rs_files = []
         rd_files = []
 
-        all_files = []
-        for subdir, _, files in os.walk(folder):
-            for f in files:
-                all_files.append(os.path.join(subdir, f))
-
+        # 获取所有文件路径
+        all_files = [os.path.join(subdir, f) for subdir, _, files in os.walk(folder) for f in files]
         total_files = len(all_files)
-        for i, file_path in enumerate(all_files):
-            try:
-                ds = pydicom.dcmread(file_path, stop_before_pixels=True)
-                modality = ds.get((0x0008, 0x0060), None)
-                if modality:
-                    modality = modality.value
-                    if modality == "CT":
-                        ct_folders.add(os.path.dirname(file_path))
-                    elif modality == "RTSTRUCT":
-                        rs_files.append(file_path)
-                    elif modality == "RTDOSE":
-                        rd_files.append(file_path)
-            except Exception:
-                continue
-            # 模拟进度
-            progress_bar["value"] = (i + 1) * 80 / total_files
-            root.update()
+
+        # 使用多进程池处理文件
+        with Pool(processes=cpu_count()) as pool:
+            results = pool.map(check_file, all_files)
+
+        # 处理结果
+        for i, result in enumerate(results):
+            if result:
+                modality, path = result
+                if modality == "CT":
+                    ct_folders.add(path)
+                elif modality == "RTSTRUCT":
+                    rs_files.append(path)
+                elif modality == "RTDOSE":
+                    rd_files.append(path)
+            # 减少进度条更新频率，每 100 个文件更新一次
+            if (i + 1) % 100 == 0 or (i + 1) == total_files:
+                progress_bar["value"] = (i + 1) * 80 / total_files
+                root.update()
 
         ct_list = sorted(list(ct_folders))
         ct_menu = tk.OptionMenu(frame, ct_combo, *ct_list)
@@ -161,7 +181,7 @@ def create_gui():
             messagebox.showwarning("Input Error", "Please select all required options!")
             return
         text_output.delete(1.0, tk.END)
-        progress_bar["value"] = 0
+        progress_bar["value"] = 10
         root.update()
         # 获取窗位窗宽
         preset_name = window_preset_combo.get()
@@ -246,8 +266,25 @@ def create_gui():
 
     root.mainloop()
 
+def check_python_version():
+    """检查 Python 版本，并在使用 3.12 时给出警告"""
+    python_version = sys.version_info
+    current_version = f"{python_version.major}.{python_version.minor}"
+    if python_version.major == 3 and python_version.minor == 12:
+        warning_msg = (
+            f"警告：当前运行的 Python 版本为 {current_version}。\n"
+            "此程序可能在 Python 3.12 上存在兼容性问题。\n"
+            "建议使用 Python 3.10 以确保最佳性能和稳定性。\n"
+            "您可以继续运行，但可能会遇到意外错误。"
+        )
+        messagebox.showwarning("Python 版本警告", warning_msg)
+    print(f"当前 Python 版本: {current_version}")
+
 def main():
+    # 检查 Python 版本
+    check_python_version()
     create_gui()
+
 
 if __name__ == "__main__":
     main()

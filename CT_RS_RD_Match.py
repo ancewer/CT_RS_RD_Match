@@ -13,7 +13,7 @@ from matplotlib.widgets import Slider
 def load_ct_images(ct_folder):
     """读取CT DICOM序列，并按照InstanceNumber排序"""
     ct_files = sorted(
-        [os.path.join(ct_folder, f) for f in os.listdir(ct_folder) if f.startswith("CT.") and f.endswith(".dcm")],
+        [os.path.join(ct_folder, f) for f in os.listdir(ct_folder) if f.endswith(".dcm") and pydicom.dcmread(os.path.join(ct_folder, f), stop_before_pixels=True).Modality=='CT'],
         key=lambda x: int(pydicom.dcmread(x, stop_before_pixels=True).InstanceNumber)
     )
     reader = sitk.ImageSeriesReader()
@@ -125,7 +125,8 @@ def resample_to_dose_grid(source_array, source_origin, source_spacing, dose_arra
     x=0
     return resampled_array
 
-def plot_ct_contour_dose_interactive_best1(ct_array, mask, dose_array, window_width=1000, window_level=0):
+def plot_ct_contour_dose_interactive_best1(ct_array, mask, dose_array, window_level=0, window_width=1000):
+    # attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
     ct_array = np.flip(ct_array, axis=1)
     mask = np.flip(mask, axis=1)
     dose_array = np.flip(dose_array, axis=1)
@@ -145,17 +146,22 @@ def plot_ct_contour_dose_interactive_best1(ct_array, mask, dose_array, window_wi
     plt.subplots_adjust(bottom=0.25)  # 预留空间给 Slider
 
     # 显示默认 CT 切片
-    img_ct = ax.imshow(ct_array[default_slice], cmap='gray', origin='lower', aspect='auto')
+    # ct_min, ct_max = np.min(ct_array), np.max(ct_array)
+    # print(ct_min, ct_max)
+    img_ct = ax.imshow(ct_array[default_slice], cmap='gray', origin='lower', aspect='auto', zorder=0)
+    # print(np.min(ct_array[default_slice]), np.max(ct_array[default_slice]))
     img_ct.set_clim(vmin=vmin, vmax=vmax)
 
     # 绘制初始 ROI 轮廓
     mask_slice = mask[default_slice]
-    contour_obj = ax.contour(mask_slice, colors='r', linewidths=1)
+    contour_obj = ax.contour(mask_slice, colors='r', linewidths=1, zorder=1)
 
     # 绘制初始剂量分布（使用 imshow）
     dose_slice = dose_array[default_slice]
+    # print(f"Dose slice min: {np.min(dose_slice)}, max: {np.max(dose_slice)}")  # 调试剂量值范围
     alpha_array = np.where(dose_slice > 0, 0.5, 0)  # 剂量 > 0 时 alpha=0.3，否则 0
-    dose_img = ax.imshow(dose_slice, alpha=alpha_array, cmap='jet', origin='lower', aspect='auto')
+    # print(f"Alpha array min: {np.min(alpha_array)}, max: {np.max(alpha_array)}")  # 调试透明度范围
+    dose_img = ax.imshow(dose_slice, alpha=alpha_array, cmap='jet', origin='lower', aspect='auto', zorder=2)
     dose_img.set_clim(vmin=np.min(dose_slice), vmax=np.max(dose_slice))
 
     # 添加 colorbar
@@ -189,6 +195,7 @@ def plot_ct_contour_dose_interactive_best1(ct_array, mask, dose_array, window_wi
         img_ct.set_data(ct_array[slice_idx])
         img_ct.set_clim(vmin=new_window_level - new_window_width / 2,
                         vmax=new_window_level + new_window_width / 2)
+        # print(np.min(ct_array[slice_idx]), np.max(ct_array[slice_idx]))
 
         # 移除旧的 ROI 轮廓
         contour_obj.remove()
@@ -535,8 +542,8 @@ def main(ct_folder, rt_structure_file, dose_file, roi_name, tmp_folder, write_mh
     print(f"✅dose_origin:{dose_origin},dose_spacing:{dose_spacing},dose_shape:{dose_array.shape[::-1]}")
     ct_range = compute_physical_range(ct_origin,ct_spacing,ct_array.shape[::-1])
     dose_range = compute_physical_range(dose_origin,dose_spacing,dose_array.shape[::-1])
-    print(f"✅ CT 物理范围 (mm): X:[{ct_range[0]}, {ct_range[1]}], "f"Y:[{ct_range[2]}, {ct_range[3]}], Z:[{ct_range[4]}, {ct_range[5]}]")
-    print(f"✅ Dose 物理范围 (mm): X:[{dose_range[0]}, {dose_range[1]}], "f"Y:[{dose_range[2]}, {dose_range[3]}], Z:[{dose_range[4]}, {dose_range[5]}]")
+    print(f"✅CT 物理范围 (mm): X:[{ct_range[0]}, {ct_range[1]}], "f"Y:[{ct_range[2]}, {ct_range[3]}], Z:[{ct_range[4]}, {ct_range[5]}]")
+    print(f"✅Dose 物理范围 (mm): X:[{dose_range[0]}, {dose_range[1]}], "f"Y:[{dose_range[2]}, {dose_range[3]}], Z:[{dose_range[4]}, {dose_range[5]}]")
 
     ct_resampled = resample_to_dose_grid(ct_array, ct_origin, ct_spacing, dose_array, dose_origin, dose_spacing,is_mask=False)
     print(f"✅Before Resampling, Mask Sum: {np.sum(mask)}")
