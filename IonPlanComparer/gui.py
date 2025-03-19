@@ -1,11 +1,20 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from functions import extract_spot_data, plot_spot_distribution
+from PIL import Image, ImageTk
 
 class RTIonSpotComparer:
     def __init__(self, root):
         self.root = root
         self.root.title("RT Ion Plan Spot Distribution Comparer")
+        try:
+            icon = Image.open("2023-06-02_105437.ico")
+            icon = icon.resize((32, 32), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(icon)
+            root.iconphoto(True, photo)
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
+
         self.root.geometry("400x550")  # 增加高度以容纳新控件
 
         self.dicom_files = []
@@ -36,7 +45,7 @@ class RTIonSpotComparer:
 
         # 添加比较 Spot Weight 选项
         tk.Label(self.root, text="Spot Weight Comparison", font=("Arial", 10)).pack(pady=5)
-        self.compare_weights_var = tk.BooleanVar(value=True)
+        self.compare_weights_var = tk.BooleanVar(value=False)
         tk.Checkbutton(self.root, text="Compare Spot Weights", variable=self.compare_weights_var).pack(pady=2)
         tk.Label(self.root, text="Tolerance (%):").pack(pady=2)
         self.tolerance_entry = tk.Entry(self.root, width=10)

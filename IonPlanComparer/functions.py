@@ -15,9 +15,10 @@ def extract_spot_data(dicom_file):
 
         filename = os.path.basename(dicom_file)
         beams = []
-        for ion_beam in ds.IonBeamSequence:
+        for ii, ion_beam in enumerate(ds.IonBeamSequence):
             if hasattr(ion_beam, 'TreatmentDeliveryType') and ion_beam.TreatmentDeliveryType != 'TREATMENT':
                 continue
+            scale_to_mu = float(ds.FractionGroupSequence[0].ReferencedBeamSequence[ii].BeamMeterset) / float(ion_beam.FinalCumulativeMetersetWeight)
             layers = []
             for i in range(0, len(ion_beam.IonControlPointSequence), 2):
                 control_point = ion_beam.IonControlPointSequence[i]
@@ -38,7 +39,7 @@ def extract_spot_data(dicom_file):
                             spots_y.append(positions[j + 1])
                             spots_weight.append(weights[j // 2])
                     energy = control_point.NominalBeamEnergy if hasattr(control_point, 'NominalBeamEnergy') else "Unknown"
-                    layers.append(((np.array(spots_x), np.array(spots_y), np.array(spots_weight)), energy, spot_count))
+                    layers.append(((np.array(spots_x), np.array(spots_y), np.array(spots_weight)*scale_to_mu), energy, spot_count))
             if layers:
                 beams.append(layers)
         return filename, beams
@@ -70,7 +71,7 @@ def plot_spot_distribution(layer_data, max_layers, spot_size_multiplier, plot_ty
                 if spot_count == 1:
                     ax.scatter(spots_x, spots_y, s=spot_size_multiplier * 100, alpha=0.8,
                                color=colors(idx), marker=single_spot_marker)
-                    ax.text(spots_x[0] + 0.5, spots_y[0] + 0.5, f"{spots_weight[0]:.2f}",
+                    ax.text(spots_x[0] + 0.5, spots_y[0] + 0.5, f"{spots_weight[0]:.3f}",
                             fontsize=8, color='black')
                 else:
                     ax.scatter(spots_x, spots_y, s=np.array(spots_weight) * spot_size_multiplier, alpha=0.8,
@@ -81,13 +82,13 @@ def plot_spot_distribution(layer_data, max_layers, spot_size_multiplier, plot_ty
                 if spot_count == 1:
                     ax.scatter(spots_x, spots_y, s=spot_size_multiplier * 100, alpha=0.8,
                                color=colors(idx), marker=single_spot_marker)
-                    ax.text(spots_x[0] + 0.5, spots_y[0] + 0.5, f"{spots_weight[0]:.2f}",
+                    ax.text(spots_x[0] + 0.5, spots_y[0] + 0.5, f"{spots_weight[0]:.3f}",
                             fontsize=8, color='black')
                 else:
                     ax.plot(spots_x, spots_y, color=colors(idx), linewidth=2,
                             marker=markers[idx % len(markers)])
                     for x, y, w in zip(spots_x, spots_y, spots_weight):
-                        ax.text(x + 0.5, y + 0.5, f"{w:.2f}", fontsize=8, color='black')
+                        ax.text(x + 0.5, y + 0.5, f"{w:.3f}", fontsize=8, color='black')
             energy_values[idx].append(energy)
         energy_str = f"{energy_values[idx][0]} MeV" if energy_values[idx][0] != "Unknown" else "Unknown"
         ax.set_title(f"{label}\nLayer 0 (Energy: {energy_str}, Total MU: {total_mu:.2f})", fontsize=10)
