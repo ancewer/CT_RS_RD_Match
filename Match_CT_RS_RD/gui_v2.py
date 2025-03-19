@@ -7,7 +7,7 @@
 # Attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
-from CT_RS_RD_Match import *
+from match_ct_rs_rd import *
 from PIL import Image, ImageTk
 import os,sys
 import pydicom
@@ -237,7 +237,7 @@ def create_gui():
     tk.OptionMenu(frame, roi_combo, "").grid(row=4, column=1, sticky="w")
 
     tk.Label(frame, text="Output Folder:").grid(row=5, column=0, sticky="w")
-    tmp_folder_var = tk.StringVar(value="Results")
+    tmp_folder_var = tk.StringVar(value="..\Results")
     tk.Entry(frame, textvariable=tmp_folder_var, width=50).grid(row=5, column=1)
     tk.Button(frame, text="Browse", command=lambda: tmp_folder_var.set(filedialog.askdirectory())).grid(row=5, column=2)
 

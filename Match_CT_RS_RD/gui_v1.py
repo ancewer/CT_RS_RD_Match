@@ -7,7 +7,7 @@
 # Attention: matplotlib imshow function alpha_array works for python 3.10, failed for python 3.12
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
-from CT_RS_RD_Match import *
+from Match_CT_RS_RD import *
 from PIL import Image, ImageTk
 import sys
 
@@ -79,7 +79,7 @@ def create_gui():
     # 设置窗口图标
     try:
         # 加载图标文件（支持 .png 或 .gif）
-        icon = Image.open("2023-06-02_105437.ico")  # 替换为你的图标路径
+        icon = Image.open(r"2023-06-02_105437.ico")  # 替换为你的图标路径
         icon = icon.resize((32, 32), Image.Resampling.LANCZOS)  # 调整大小为 32x32
         photo = ImageTk.PhotoImage(icon)
         root.iconphoto(True, photo)  # 设置图标，True 表示应用于所有窗口
@@ -116,7 +116,7 @@ def create_gui():
 
     # 输出文件夹
     tk.Label(frame, text="Output Folder:").grid(row=4, column=0, sticky="w")
-    tmp_folder_var = tk.StringVar(value="Results")
+    tmp_folder_var = tk.StringVar(value="..\Results")
     tk.Entry(frame, textvariable=tmp_folder_var, width=50).grid(row=4, column=1)
     tk.Button(frame, text="Browse", command=lambda: tmp_folder_var.set(filedialog.askdirectory())).grid(row=4, column=2)
 
